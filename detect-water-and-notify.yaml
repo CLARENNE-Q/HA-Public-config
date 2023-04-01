@@ -1,0 +1,27 @@
+blueprint:
+  name: Detect water and notify
+  description: detect  'moisture' device-class and if so execute an action.
+  domain: automation
+  input:
+    actions:
+      name: Actions
+      description: Notifications or similar to be run. {{sensors}} is replaced with the names of sensors.
+      selector:
+        action: {}
+variables:
+  sensors: >-
+    {% set result = namespace(sensors=[]) %}
+    {% for state in states.sensor | selectattr('attributes.device_class', '==', 'moisture') %}
+        {% set result.sensors = result.sensors + [state.name ~ ' (' ~ state.state ~ ' %)'] %}
+    {% endfor %}
+    {% for state in states.binary_sensor | selectattr('attributes.device_class', '==', 'moisture') | selectattr('state', '==', 'on') %}
+       {% set result.sensors = result.sensors + [state.name] %}
+    {% endfor %}
+    {{result.sensors|join(', ')}}
+trigger:
+  - type: moist
+    platform: device
+action:
+- choose: []
+  default: !input 'actions'
+mode: single
